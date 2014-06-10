@@ -221,6 +221,7 @@ public class Main
                 mostSimilar.add(new mostSimilarItem(i, sim));
             }
 
+            //TODO: use heap instead
             Collections.sort(mostSimilar, new Comparator<mostSimilarItem>()
             {
                 public int compare(mostSimilarItem arg0, mostSimilarItem arg1)
@@ -240,7 +241,7 @@ public class Main
             });
 
             // print result
-            System.out.print(itemsMap.get(testContentId).title+": ");
+            System.out.print(itemsMap.get(testContentId).title + ": ");
             for (int j = 0; j < itemsMap.get(testContentId).genres.size(); j++)
             {
                 if (itemsMap.get(testContentId).genres.get(j) == 1)
