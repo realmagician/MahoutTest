@@ -1,8 +1,15 @@
 package com.mahout;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 
 import org.apache.mahout.cf.taste.common.Refreshable;
 import org.apache.mahout.cf.taste.common.TasteException;
@@ -26,6 +33,7 @@ import org.apache.mahout.cf.taste.recommender.ItemBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.PreferenceInferrer;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
+import org.apache.mahout.math.hadoop.similarity.cooccurrence.measures.TanimotoCoefficientSimilarity;
 
 public class Main
 {
@@ -103,17 +111,87 @@ public class Main
         }
     }
 
+    class mostSimilarItem
+    {
+        public int itemId;
+        public double similarity;
+
+        public mostSimilarItem(int itemId, double similarity)
+        {
+            this.itemId = itemId;
+            this.similarity = similarity;
+        }
+    }
+
+    class MovieItem
+    {
+        public String title;
+        public ArrayList<Integer> genres = new ArrayList<Integer>(19);
+    }
+
     public void ContentBasedFoo()
     {
         try
         {
-            DataModel model = new FileDataModel(new File("test_no_preference"));
-            UserSimilarity similarity = new EuclideanDistanceSimilarity(model);
-            // PreferenceArray array = model.getPreferencesFromUser(1);
-            // for(int i=0;i<array.length();i++)
-            // {
-            // System.out.println(array.getItemID(i)+" "+array.getValue(i));
-            // }
+            // read movie info
+            File genreFile = new File("u.genre");
+            InputStreamReader genreInStream = new InputStreamReader(new FileInputStream(genreFile));
+            BufferedReader genreReader = new BufferedReader(genreInStream);
+            HashMap<Integer, String> genreMap = new HashMap<Integer, String>();
+            while (true)
+            {
+                String line = genreReader.readLine();
+                if (line == null)
+                {
+                    break;
+                }
+
+                String[] strs = line.split("\\|");
+                if (strs.length < 2)
+                {
+                    continue;
+                }
+
+                genreMap.put(Integer.valueOf(strs[1]), strs[0]);
+            }
+
+            genreReader.close();
+
+            File itemsFile = new File("u.item");
+            InputStreamReader itemsInStream = new InputStreamReader(new FileInputStream(itemsFile));
+            BufferedReader itemsReader = new BufferedReader(itemsInStream);
+            HashMap<Integer, MovieItem> itemsMap = new HashMap<Integer, MovieItem>();
+            while (true)
+            {
+                String line = itemsReader.readLine();
+                if (line == null)
+                {
+                    break;
+                }
+
+                String[] strs = line.split("\\|");
+                if (strs.length < 24)
+                {
+                    continue;
+                }
+
+                MovieItem movieItem = new MovieItem();
+                movieItem.title = strs[1];
+                for (int i = 5; i < strs.length; i++)
+                {
+                    movieItem.genres.add(Integer.valueOf(strs[i]));
+                }
+
+                itemsMap.put(Integer.valueOf(strs[0]), movieItem);
+            }
+
+            itemsReader.close();
+
+            // test contended based
+            DataModel model = new FileDataModel(new File("uMahout_withgenre.data"));
+            // UserSimilarity similarity = new
+            // EuclideanDistanceSimilarity(model);
+            UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
             similarity.setPreferenceInferrer(new PreferenceInferrer()
             {
                 public void refresh(Collection<Refreshable> alreadyRefreshed)
@@ -122,17 +200,71 @@ public class Main
 
                 public float inferPreference(long userID, long itemID) throws TasteException
                 {
-                    // set 0 if there is no prefernce from userID to itemID,
+                    // set 0 if there is no preference from userID to itemID,
                     // or UserSimilarity will ignore the difference
-                    // between userID and itemID
+                    // between corresponding userIDs
                     return 0;
                 }
             });
 
-            double temp = similarity.userSimilarity(1, 1);
-            System.out.println(temp);
-            temp = similarity.userSimilarity(1, 2);
-            System.out.println(temp);
+            int testContentId = 95;
+            int itemsCount = itemsMap.size();
+            ArrayList<mostSimilarItem> mostSimilar = new ArrayList<mostSimilarItem>();
+            for (int i = 1; i <= itemsCount; i++)
+            {
+                if (testContentId == i)
+                {
+                    continue;
+                }
+
+                double sim = similarity.userSimilarity(testContentId, i);
+                mostSimilar.add(new mostSimilarItem(i, sim));
+            }
+
+            Collections.sort(mostSimilar, new Comparator<mostSimilarItem>()
+            {
+                public int compare(mostSimilarItem arg0, mostSimilarItem arg1)
+                {
+                    if (arg0.similarity == arg1.similarity)
+                    {
+                        return 0;
+                    }
+
+                    if (arg0.similarity > arg1.similarity)
+                    {
+                        return -1;
+                    }
+
+                    return 1;
+                }
+            });
+
+            // print result
+            System.out.print(itemsMap.get(testContentId).title+": ");
+            for (int j = 0; j < itemsMap.get(testContentId).genres.size(); j++)
+            {
+                if (itemsMap.get(testContentId).genres.get(j) == 1)
+                {
+                    System.out.print(genreMap.get(j + 1) + " ");
+                }
+            }
+
+            System.out.println("\n most similar items:");
+
+            for (int i = 0; i < mostSimilar.size() && i < 5; i++)
+            {
+                System.out.println(itemsMap.get(mostSimilar.get(i).itemId).title + " " + mostSimilar.get(i).similarity);
+                MovieItem movieItem = itemsMap.get(mostSimilar.get(i).itemId);
+                for (int j = 0; j < movieItem.genres.size(); j++)
+                {
+                    if (movieItem.genres.get(j) == 1)
+                    {
+                        System.out.print(genreMap.get(j + 1) + " ");
+                    }
+                }
+
+                System.out.println();
+            }
         }
         catch (Exception e)
         {
