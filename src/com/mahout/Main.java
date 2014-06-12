@@ -3,7 +3,6 @@ package com.mahout;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,11 +19,8 @@ import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
 import org.apache.mahout.cf.taste.impl.neighborhood.ThresholdUserNeighborhood;
 import org.apache.mahout.cf.taste.impl.recommender.GenericItemBasedRecommender;
 import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
-import org.apache.mahout.cf.taste.impl.similarity.EuclideanDistanceSimilarity;
-import org.apache.mahout.cf.taste.impl.similarity.LogLikelihoodSimilarity;
 import org.apache.mahout.cf.taste.impl.similarity.PearsonCorrelationSimilarity;
 import org.apache.mahout.cf.taste.model.DataModel;
-import org.apache.mahout.cf.taste.model.PreferenceArray;
 import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
 import org.apache.mahout.cf.taste.recommender.RecommendedItem;
 import org.apache.mahout.cf.taste.recommender.Recommender;
@@ -33,7 +29,6 @@ import org.apache.mahout.cf.taste.recommender.ItemBasedRecommender;
 import org.apache.mahout.cf.taste.similarity.ItemSimilarity;
 import org.apache.mahout.cf.taste.similarity.PreferenceInferrer;
 import org.apache.mahout.cf.taste.similarity.UserSimilarity;
-import org.apache.mahout.math.hadoop.similarity.cooccurrence.measures.TanimotoCoefficientSimilarity;
 
 public class Main
 {
@@ -207,7 +202,8 @@ public class Main
                 }
             });
 
-            int testContentId = 95;
+            // int[] testCountIds = { 1, 3, 4, 10, 98, 80, 34, 78, 98, 11 };
+            int testContentId = 97;
             int itemsCount = itemsMap.size();
             ArrayList<mostSimilarItem> mostSimilar = new ArrayList<mostSimilarItem>();
             for (int i = 1; i <= itemsCount; i++)
@@ -221,7 +217,7 @@ public class Main
                 mostSimilar.add(new mostSimilarItem(i, sim));
             }
 
-            //TODO: use heap instead
+            // TODO: use heap instead
             Collections.sort(mostSimilar, new Comparator<mostSimilarItem>()
             {
                 public int compare(mostSimilarItem arg0, mostSimilarItem arg1)
