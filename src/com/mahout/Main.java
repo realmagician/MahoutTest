@@ -184,8 +184,7 @@ public class Main
 
             // test contended based
             DataModel model = new FileDataModel(new File("uMahout_withgenre.data"));
-            // UserSimilarity similarity = new
-            // EuclideanDistanceSimilarity(model);
+            // UserSimilarity similarity = new EuclideanDistanceSimilarity(model);
             UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
             similarity.setPreferenceInferrer(new PreferenceInferrer()
             {
